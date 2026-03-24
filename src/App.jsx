@@ -1,4 +1,4 @@
-import TexturedCube from "./TexturedCube"
+import TexturedCube from "./Cube"
 
 
 function App() {
