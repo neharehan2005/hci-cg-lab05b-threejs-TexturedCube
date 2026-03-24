@@ -1,57 +1,93 @@
 import * as THREE from "three";
 import { useEffect, useRef } from "react";
 
-function Cube() {
-    const mountRef = useRef(null);
+const base = import.meta.env.BASE_URL;
 
-    useEffect(() => {
-        const scene = new THREE.Scene();
-
-        const camera = new THREE.PerspectiveCamera(
-            75,
-            window.innerWidth / window.innerHeight,
-            0.1,
-            1000
-        );
-        camera.position.z = 5;
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        mountRef.current.appendChild(renderer.domElement);
-
-        const geometry = new THREE.BoxGeometry();
-        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        const cube = new THREE.Mesh(geometry, material);
-        scene.add(cube);
-
-        const animate = () => {
-            requestAnimationFrame(animate);
-            cube.rotation.x += 0.01;
-            cube.rotation.y += 0.01;
-            renderer.render(scene, camera);
-        };
-
-        animate();
-
-        // ✅ Handle resize
-        const handleResize = () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        };
-        window.addEventListener("resize", handleResize);
-
-        return () => {
-            window.removeEventListener("resize", handleResize);
-            renderer.dispose();
-
-            if (mountRef.current) {
-                mountRef.current.removeChild(renderer.domElement);
-            }
-        };
-    }, []);
-
-    return <div ref={mountRef}></div>;
+function setCamera(width, height) {
+  const camera = new THREE.PerspectiveCamera(
+    75,
+    width / height,
+    0.1,
+    1000
+  );
+  camera.position.z = 5;
+  return camera;
 }
 
-export default Cube;
+function TexturedCube() {
+  const mountRef = useRef(null);
+
+  useEffect(() => {
+
+    const width = mountRef.current.clientWidth;
+    const height = mountRef.current.clientHeight;
+    const scene = new THREE.Scene();
+
+
+    const camera = setCamera(window.innerWidth, window.innerHeight);
+
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x000000, 0);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    mountRef.current.appendChild(renderer.domElement);
+
+
+    const loader = new THREE.TextureLoader();
+
+
+    const texturePaths = [
+      `${base}textures/right.jpg`,   // +X
+      `${base}textures/left.jpg`,    // -X
+      `${base}textures/top.jpg`,     // +Y
+      `${base}textures/bottom.jpg`,  // -Y
+      `${base}textures/front.jpg`,   // +Z
+      `${base}textures/back.jpg`,    // -Z
+    ];
+
+
+
+    const materials = texturePaths.map((path) => {
+      const texture = loader.load(path, () => {
+        texture.needsUpdate = true;
+      });
+
+      texture.colorSpace = THREE.SRGBColorSpace;
+
+      return new THREE.MeshBasicMaterial({
+        map: texture
+      });
+    });
+
+
+    const geometry = new THREE.BoxGeometry(3, 3, 3);
+    const cube = new THREE.Mesh(geometry, materials);
+    scene.add(cube);
+
+
+    const animate = () => {
+      requestAnimationFrame(animate);
+      cube.rotation.x += 0.01;
+      cube.rotation.y += 0.01;
+
+      renderer.render(scene, camera);
+    };
+    animate();
+
+
+    return () => {
+      geometry.dispose();
+      materials.forEach((m) => m.dispose());
+      renderer.dispose();
+    };
+  }, []);
+
+  return <div ref={mountRef}></div>;
+
+}
+
+export default TexturedCube;
